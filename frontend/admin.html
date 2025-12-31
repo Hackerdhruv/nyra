@@ -1,0 +1,1012 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vibely Admin Panel</title>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+    }
+    
+    @keyframes matrix-rain {
+      0% { transform: translateY(-100%); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { transform: translateY(100vh); opacity: 0; }
+    }
+    
+    @keyframes glow-pulse {
+      0%, 100% { 
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.7;
+      }
+    }
+    
+    @keyframes scan-line {
+      0% { top: 0%; }
+      100% { top: 100%; }
+    }
+    
+    @keyframes typing {
+      from { width: 0; }
+      to { width: 100%; }
+    }
+    
+    .matrix-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: hidden;
+      opacity: 0.1;
+      z-index: 0;
+    }
+    
+    .matrix-char {
+      position: absolute;
+      color: #00ff00;
+      font-family: monospace;
+      font-size: 14px;
+      animation: matrix-rain linear infinite;
+    }
+    
+    .glow {
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    
+    .cyber-line {
+      position: relative;
+    }
+    
+    .cyber-line::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      width: 3px;
+      height: 100%;
+      background: linear-gradient(to bottom, transparent, #00ff00, transparent);
+    }
+    
+    .scan-line {
+      position: absolute;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(transparent, #00ff00, transparent);
+      animation: scan-line 4s linear infinite;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+    
+    .hacker-border {
+      border: 1px solid #00ff00;
+      position: relative;
+      background: linear-gradient(135deg, rgba(0, 255, 0, 0.03) 0%, transparent 100%);
+    }
+    
+    .hacker-border::before {
+      content: '';
+      position: absolute;
+      top: -1px;
+      left: -1px;
+      right: -1px;
+      bottom: -1px;
+      background: linear-gradient(45deg, #00ff00 0%, transparent 50%, #00ff00 100%);
+      opacity: 0.15;
+      z-index: -1;
+    }
+    
+    .cyber-corner {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border: 2px solid #00ff00;
+    }
+    
+    .cyber-corner.top-left {
+      top: -1px;
+      left: -1px;
+      border-right: none;
+      border-bottom: none;
+    }
+    
+    .cyber-corner.top-right {
+      top: -1px;
+      right: -1px;
+      border-left: none;
+      border-bottom: none;
+    }
+    
+    .cyber-corner.bottom-left {
+      bottom: -1px;
+      left: -1px;
+      border-right: none;
+      border-top: none;
+    }
+    
+    .cyber-corner.bottom-right {
+      bottom: -1px;
+      right: -1px;
+      border-left: none;
+      border-top: none;
+    }
+    
+    .tab-button {
+      padding: 0.75rem 1.5rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      border: 1px solid transparent;
+    }
+    
+    .tab-button.active {
+      border-color: #00ff00;
+      background: linear-gradient(to right, rgba(0, 255, 0, 0.15), rgba(0, 255, 0, 0.05));
+      position: relative;
+    }
+    
+    .tab-button.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: #00ff00;
+    }
+    
+    .neon-text {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .neon-text::after {
+      content: attr(data-text);
+      position: absolute;
+      left: 0;
+      top: 0;
+      color: #00ff00;
+      filter: blur(8px);
+      opacity: 0.5;
+      z-index: -1;
+    }
+    
+    .typing-effect {
+      overflow: hidden;
+      white-space: nowrap;
+      border-right: 2px solid #00ff00;
+      animation: typing 2s steps(40) 1s both;
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+ </head>
+ <body class="h-full bg-black text-green-500 font-mono overflow-auto">
+  <div class="matrix-bg" id="matrix"></div>
+  <div id="app" class="w-full h-full relative z-10"></div>
+  <script>
+    const PASSWORD = "dhruvvibely45";
+    const defaultConfig = {
+      panel_title: "VIBELY ADMIN PANEL",
+      chatbot_name: "Vibely",
+      background_color: "#000000",
+      surface_color: "#0a0a0a",
+      text_color: "#00ff00",
+      primary_action_color: "#00ff00",
+      secondary_action_color: "#008800",
+      font_family: "monospace",
+      font_size: 14
+    };
+    
+    let isAuthenticated = false;
+    let allData = [];
+    let trainingData = [];
+    let liveMessages = [];
+    let onlineUsers = [];
+    let currentTab = 'training';
+
+    // Matrix rain effect
+    function createMatrixRain() {
+      const matrix = document.getElementById('matrix');
+      const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+      
+      for (let i = 0; i < 30; i++) {
+        const char = document.createElement('div');
+        char.className = 'matrix-char';
+        char.textContent = chars[Math.floor(Math.random() * chars.length)];
+        char.style.left = Math.random() * 100 + '%';
+        char.style.animationDuration = (Math.random() * 3 + 2) + 's';
+        char.style.animationDelay = Math.random() * 2 + 's';
+        matrix.appendChild(char);
+      }
+    }
+
+    const dataHandler = {
+      onDataChanged(data) {
+        allData = data;
+        trainingData = data.filter(d => d.type === 'training');
+        liveMessages = data.filter(d => d.type === 'message');
+        onlineUsers = data.filter(d => d.type === 'user');
+        
+        if (isAuthenticated) {
+          renderCurrentTab();
+        }
+      }
+    };
+
+    async function initApp() {
+      createMatrixRain();
+      
+      const initResult = await window.dataSdk.init(dataHandler);
+      if (!initResult.isOk) {
+        console.error("Failed to initialize data SDK");
+      }
+      
+      await window.elementSdk.init({
+        defaultConfig,
+        onConfigChange: async (config) => {
+          const app = document.getElementById('app');
+          if (!app) return;
+          
+          const customFont = config.font_family || defaultConfig.font_family;
+          const baseSize = config.font_size || defaultConfig.font_size;
+          const bgColor = config.background_color || defaultConfig.background_color;
+          const surfaceColor = config.surface_color || defaultConfig.surface_color;
+          const textColor = config.text_color || defaultConfig.text_color;
+          const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+          const secondaryColor = config.secondary_action_color || defaultConfig.secondary_action_color;
+          
+          document.body.style.fontFamily = `${customFont}, monospace`;
+          document.body.style.fontSize = `${baseSize}px`;
+          document.body.style.backgroundColor = bgColor;
+          document.body.style.color = textColor;
+          
+          const title = document.getElementById('panel-title');
+          if (title) {
+            title.textContent = config.panel_title || defaultConfig.panel_title;
+            title.style.fontSize = `${baseSize * 1.5}px`;
+            title.style.color = primaryColor;
+          }
+          
+          const chatbotName = document.getElementById('chatbot-name');
+          if (chatbotName) {
+            chatbotName.textContent = config.chatbot_name || defaultConfig.chatbot_name;
+          }
+          
+          document.querySelectorAll('.primary-btn').forEach(btn => {
+            btn.style.backgroundColor = primaryColor;
+            btn.style.color = bgColor;
+            btn.style.borderColor = primaryColor;
+          });
+          
+          document.querySelectorAll('.secondary-btn').forEach(btn => {
+            btn.style.backgroundColor = secondaryColor;
+            btn.style.color = bgColor;
+            btn.style.borderColor = secondaryColor;
+          });
+        },
+        mapToCapabilities: (config) => ({
+          recolorables: [
+            {
+              get: () => config.background_color || defaultConfig.background_color,
+              set: (value) => {
+                config.background_color = value;
+                window.elementSdk.setConfig({ background_color: value });
+              }
+            },
+            {
+              get: () => config.surface_color || defaultConfig.surface_color,
+              set: (value) => {
+                config.surface_color = value;
+                window.elementSdk.setConfig({ surface_color: value });
+              }
+            },
+            {
+              get: () => config.text_color || defaultConfig.text_color,
+              set: (value) => {
+                config.text_color = value;
+                window.elementSdk.setConfig({ text_color: value });
+              }
+            },
+            {
+              get: () => config.primary_action_color || defaultConfig.primary_action_color,
+              set: (value) => {
+                config.primary_action_color = value;
+                window.elementSdk.setConfig({ primary_action_color: value });
+              }
+            },
+            {
+              get: () => config.secondary_action_color || defaultConfig.secondary_action_color,
+              set: (value) => {
+                config.secondary_action_color = value;
+                window.elementSdk.setConfig({ secondary_action_color: value });
+              }
+            }
+          ],
+          borderables: [],
+          fontEditable: {
+            get: () => config.font_family || defaultConfig.font_family,
+            set: (value) => {
+              config.font_family = value;
+              window.elementSdk.setConfig({ font_family: value });
+            }
+          },
+          fontSizeable: {
+            get: () => config.font_size || defaultConfig.font_size,
+            set: (value) => {
+              config.font_size = value;
+              window.elementSdk.setConfig({ font_size: value });
+            }
+          }
+        }),
+        mapToEditPanelValues: (config) => new Map([
+          ["panel_title", config.panel_title || defaultConfig.panel_title],
+          ["chatbot_name", config.chatbot_name || defaultConfig.chatbot_name]
+        ])
+      });
+      
+      renderLoginScreen();
+    }
+
+    function renderLoginScreen() {
+      const app = document.getElementById('app');
+      const config = window.elementSdk?.config || defaultConfig;
+      
+      app.innerHTML = `
+        <div class="w-full h-full flex items-center justify-center" style="background-color: ${config.background_color || defaultConfig.background_color};">
+          <div class="hacker-border p-8 max-w-md w-full mx-4" style="background-color: ${config.surface_color || defaultConfig.surface_color};">
+            <div class="scan-line"></div>
+            <h1 id="panel-title" class="text-2xl font-bold mb-6 text-center glow" style="color: ${config.primary_action_color || defaultConfig.primary_action_color};">${config.panel_title || defaultConfig.panel_title}</h1>
+            <div class="mb-4 text-center opacity-75">[SECURE ACCESS REQUIRED]</div>
+            <form id="login-form" class="space-y-4">
+              <div>
+                <label for="password" class="block mb-2">ACCESS_CODE:</label>
+                <input 
+                  type="password" 
+                  id="password" 
+                  class="w-full px-4 py-2 border focus:outline-none focus:ring-2" 
+                  style="background-color: #1a1a1a; border-color: ${config.primary_action_color || defaultConfig.primary_action_color}; color: #00ff00; position: relative; z-index: 100;"
+                  placeholder="Enter password"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+              <div id="error-message" class="text-red-500 text-sm hidden">[!] ACCESS DENIED</div>
+              <button 
+                type="submit" 
+                class="primary-btn w-full py-3 font-bold border"
+                style="background-color: ${config.primary_action_color || defaultConfig.primary_action_color}; color: ${config.background_color || defaultConfig.background_color}; border-color: ${config.primary_action_color || defaultConfig.primary_action_color};"
+              >
+                [AUTHENTICATE]
+              </button>
+            </form>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('login-form').addEventListener('submit', handleLogin);
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const passwordInput = document.getElementById('password');
+      const errorMsg = document.getElementById('error-message');
+      
+      if (passwordInput.value === PASSWORD) {
+        isAuthenticated = true;
+        renderDashboard();
+      } else {
+        errorMsg.classList.remove('hidden');
+        passwordInput.value = '';
+        setTimeout(() => errorMsg.classList.add('hidden'), 3000);
+      }
+    }
+
+    function renderDashboard() {
+      const app = document.getElementById('app');
+      const config = window.elementSdk?.config || defaultConfig;
+      
+      const currentTime = new Date().toLocaleTimeString();
+      const currentDate = new Date().toLocaleDateString();
+      
+      app.innerHTML = `
+        <div class="w-full h-full flex flex-col" style="background-color: ${config.background_color || defaultConfig.background_color};">
+          <div class="scan-line"></div>
+          
+          <header class="hacker-border p-6" style="background-color: ${config.surface_color || defaultConfig.surface_color}; background-image: linear-gradient(135deg, rgba(0, 255, 0, 0.05) 0%, transparent 50%);">
+            <div class="cyber-corner top-left"></div>
+            <div class="cyber-corner top-right"></div>
+            <div class="flex justify-between items-center mb-4">
+              <div class="flex-1">
+                <h1 id="panel-title" class="text-2xl font-bold mb-2" style="color: ${config.primary_action_color || defaultConfig.primary_action_color}; letter-spacing: 3px; text-transform: uppercase; font-weight: 700;">${config.panel_title || defaultConfig.panel_title}</h1>
+                <div class="flex gap-6 text-xs">
+                  <div class="flex items-center gap-2">
+                    <span style="opacity: 0.4;">▶</span>
+                    <span class="opacity-50">SYSTEM:</span> 
+                    <span id="chatbot-name" style="color: ${config.primary_action_color || defaultConfig.primary_action_color}; font-weight: 600;">${config.chatbot_name || defaultConfig.chatbot_name}</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span style="width: 6px; height: 6px; background: ${config.primary_action_color || defaultConfig.primary_action_color}; display: inline-block; animation: glow-pulse 2s infinite;"></span>
+                    <span class="opacity-50">STATUS:</span>
+                    <span style="color: ${config.primary_action_color || defaultConfig.primary_action_color}; font-weight: 600;">ONLINE</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span style="opacity: 0.4;">⬢</span>
+                    <span class="opacity-50">USERS:</span>
+                    <span style="color: ${config.primary_action_color || defaultConfig.primary_action_color}; font-weight: 600;">${onlineUsers.length}</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span style="opacity: 0.4;">◉</span>
+                    <span class="opacity-50">TIME:</span>
+                    <span id="current-time" style="color: ${config.primary_action_color || defaultConfig.primary_action_color}; font-weight: 600;">${currentTime}</span>
+                  </div>
+                </div>
+              </div>
+              <button id="logout-btn" class="secondary-btn px-6 py-2 border transition-all hover:scale-105" style="background-color: ${config.secondary_action_color || defaultConfig.secondary_action_color}; color: ${config.background_color || defaultConfig.background_color}; border-color: ${config.secondary_action_color || defaultConfig.secondary_action_color};">
+                <span style="opacity: 0.5;">[</span>LOGOUT<span style="opacity: 0.5;">]</span>
+              </button>
+            </div>
+            <div class="flex gap-3 text-xs opacity-30 items-center">
+              <div>╔═══</div>
+              <div style="flex: 1; height: 1px; background: linear-gradient(to right, ${config.primary_action_color || defaultConfig.primary_action_color}, transparent);"></div>
+              <div>═══╗</div>
+            </div>
+          </header>
+
+          <div class="flex border-b border-t" style="background-color: ${config.surface_color || defaultConfig.surface_color}; border-color: ${config.primary_action_color || defaultConfig.primary_action_color};">
+            <button class="tab-button ${currentTab === 'training' ? 'active' : ''}" data-tab="training" style="color: ${config.text_color || defaultConfig.text_color}; border-color: ${config.primary_action_color || defaultConfig.primary_action_color};">
+              <div style="font-size: 10px; opacity: 0.5; margin-bottom: 2px;">MODULE_01</div>
+              <div>[TRAINED_DATA]</div>
+            </button>
+            <button class="tab-button ${currentTab === 'messages' ? 'active' : ''}" data-tab="messages" style="color: ${config.text_color || defaultConfig.text_color}; border-color: ${config.primary_action_color || defaultConfig.primary_action_color};">
+              <div style="font-size: 10px; opacity: 0.5; margin-bottom: 2px;">MODULE_02</div>
+              <div>[LIVE_MESSAGES]</div>
+            </button>
+            <button class="tab-button ${currentTab === 'analytics' ? 'active' : ''}" data-tab="analytics" style="color: ${config.text_color || defaultConfig.text_color}; border-color: ${config.primary_action_color || defaultConfig.primary_action_color};">
+              <div style="font-size: 10px; opacity: 0.5; margin-bottom: 2px;">MODULE_03</div>
+              <div>[ANALYTICS]</div>
+            </button>
+          </div>
+
+          <main id="content-area" class="flex-1 p-6 overflow-auto" style="background-image: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 255, 0, 0.03) 2px, rgba(0, 255, 0, 0.03) 4px);">
+            ${renderTabContent()}
+          </main>
+        </div>
+      `;
+
+      document.getElementById('logout-btn').addEventListener('click', handleLogout);
+      
+      // Update time every second
+      setInterval(() => {
+        const timeElement = document.getElementById('current-time');
+        if (timeElement) {
+          timeElement.textContent = new Date().toLocaleTimeString();
+        }
+      }, 1000);
+      
+      document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          currentTab = e.target.closest('.tab-button').dataset.tab;
+          renderDashboard();
+        });
+      });
+      
+      attachEventListeners();
+    }
+
+    function renderTabContent() {
+      switch(currentTab) {
+        case 'training':
+          return renderTrainingData();
+        case 'messages':
+          return renderLiveMessages();
+        case 'analytics':
+          return renderAnalytics();
+        default:
+          return '';
+      }
+    }
+
+    function renderTrainingData() {
+      const config = window.elementSdk?.config || defaultConfig;
+      
+      return `
+        <div>
+          <div class="flex justify-between items-center mb-6">
+            <div>
+              <h2 class="text-xl glow mb-1" style="color: ${config.primary_action_color || defaultConfig.primary_action_color}; letter-spacing: 1px;">[TRAINING_DATABASE]</h2>
+              <div class="text-xs opacity-50">◢ TOTAL_ENTRIES: ${trainingData.length} / 999</div>
+            </div>
+            <button id="add-training-btn" class="primary-btn px-6 py-3 border" style="background-color: ${config.primary_action_color || defaultConfig.primary_action_color}; color: ${config.background_color || defaultConfig.background_color}; border-color: ${config.primary_action_color || defaultConfig.primary_action_color};">
+              <span style="font-size: 16px; margin-right: 4px;">⊕</span>[ADD_ENTRY]
+            </button>
+          </div>
+          
+          <div class="space-y-4">
+            ${trainingData.length === 0 ? `
+              <div class="hacker-border p-8 text-center" style="background-color: ${config.surface_color || defaultConfig.surface_color}; background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0, 255, 0, 0.02) 10px, rgba(0, 255, 0, 0.02) 20px);">
+                <div style="font-size: 40px; opacity: 0.2; margin-bottom: 8px;">⚠</div>
+                <div style="opacity: 0.5;">[NO_TRAINING_DATA_FOUND]</div>
+                <div style="font-size: 10px; opacity: 0.3; margin-top: 8px;">INITIALIZE_DATABASE_WITH_FIRST_ENTRY</div>
+              </div>
+            ` : trainingData.map((item, index) => `
+              <div class="hacker-border p-5 transition-all hover:translate-x-1" style="background-color: ${config.surface_color || defaultConfig.surface_color}; background-image: linear-gradient(90deg, rgba(0, 255, 0, 0.08) 0%, transparent 100%);">
+                <div class="cyber-corner top-left"></div>
+                <div class="cyber-corner bottom-right"></div>
+                <div class="flex justify-between items-start mb-3">
+                  <div class="flex items-center gap-3">
+                    <div style="width: 24px; height: 24px; border: 1px solid ${config.primary_action_color || defaultConfig.primary_action_color}; display: flex; align-items: center; justify-content: center; font-size: 10px; background: rgba(0, 255, 0, 0.05);">
+                      ${String(index + 1).padStart(2, '0')}
+                    </div>
+                    <div class="text-xs opacity-40" style="font-family: monospace;">ENTRY_${String(index + 1).padStart(3, '0')}</div>
+                  </div>
+                  <div class="flex gap-2">
+                    <button class="edit-training-btn secondary-btn px-4 py-1 border text-xs transition-all hover:scale-105" data-id="${item.id}" style="background-color: transparent; color: ${config.secondary_action_color || defaultConfig.secondary_action_color}; border-color: ${config.secondary_action_color || defaultConfig.secondary_action_color};">
+                      ✎ EDIT
+                    </button>
+                    <button class="delete-training-btn secondary-btn px-4 py-1 border text-xs transition-all hover:scale-105" data-id="${item.id}" style="background-color: transparent; color: #ff0000; border-color: #ff0000;">
+                      ✕ DELETE
+                    </button>
+                  </div>
+                </div>
+                <div style="border-left: 3px solid ${config.primary_action_color || defaultConfig.primary_action_color}; padding-left: 16px; margin-bottom: 12px; position: relative;">
+                  <div style="position: absolute; left: -6px; top: 0; width: 9px; height: 9px; border: 2px solid ${config.primary_action_color || defaultConfig.primary_action_color}; background: ${config.surface_color || defaultConfig.surface_color}; transform: rotate(45deg);"></div>
+                  <div class="mb-2">
+                    <span style="opacity: 0.4; font-size: 11px; letter-spacing: 1px;">▶ QUERY</span>
+                  </div>
+                  <div class="mb-3" style="color: ${config.primary_action_color || defaultConfig.primary_action_color}; font-size: 15px; font-weight: 600;">${item.question}</div>
+                  <div class="mb-2">
+                    <span style="opacity: 0.4; font-size: 11px; letter-spacing: 1px;">▶ RESPONSE</span>
+                  </div>
+                  <div style="line-height: 1.6; opacity: 0.9;">${item.answer}</div>
+                </div>
+                <div class="flex justify-between text-xs opacity-30" style="border-top: 1px solid rgba(0, 255, 0, 0.15); padding-top: 8px; margin-top: 8px;">
+                  <div>╚ ${new Date(item.timestamp).toLocaleDateString()}</div>
+                  <div>${new Date(item.timestamp).toLocaleTimeString()} ╝</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderLiveMessages() {
+      const config = window.elementSdk?.config || defaultConfig;
+      
+      return `
+        <div>
+          <div class="mb-6">
+            <h2 class="text-xl glow mb-1" style="color: ${config.primary_action_color || defaultConfig.primary_action_color}; letter-spacing: 1px;">[LIVE_MESSAGE_MONITOR]</h2>
+            <div class="text-xs opacity-50">◢ ACTIVE_MESSAGES: ${liveMessages.length} | STATUS: <span class="glow">MONITORING</span></div>
+          </div>
+          
+          <div class="space-y-4">
+            ${liveMessages.length === 0 ? `
+              <div class="hacker-border p-8 text-center" style="background-color: ${config.surface_color || defaultConfig.surface_color}; background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0, 255, 0, 0.02) 10px, rgba(0, 255, 0, 0.02) 20px);">
+                <div style="font-size: 40px; opacity: 0.2; margin-bottom: 8px;">◉</div>
+                <div style="opacity: 0.5;">[NO_MESSAGES_DETECTED]</div>
+                <div style="font-size: 10px; opacity: 0.3; margin-top: 8px;">AWAITING_INCOMING_TRANSMISSIONS</div>
+              </div>
+            ` : liveMessages.slice().reverse().map((msg, index) => `
+              <div class="hacker-border p-5" style="background-color: ${config.surface_color || defaultConfig.surface_color}; background-image: linear-gradient(to right, rgba(0, 255, 0, 0.05), transparent 70%); position: relative; overflow: hidden;">
+                <div style="position: absolute; top: 0; right: 0; width: 60px; height: 60px; background: radial-gradient(circle, rgba(0, 255, 0, 0.1), transparent); pointer-events: none;"></div>
+                
+                <div class="flex justify-between items-start mb-4">
+                  <div class="flex items-center gap-3">
+                    <div style="width: 8px; height: 8px; background: ${config.primary_action_color || defaultConfig.primary_action_color}; border-radius: 50%; box-shadow: 0 0 10px ${config.primary_action_color || defaultConfig.primary_action_color};" class="glow"></div>
+                    <div>
+                      <div class="text-xs opacity-40" style="font-family: monospace;">MSG_ID: ${String(liveMessages.length - index).padStart(3, '0')}</div>
+                      <div class="glow" style="color: ${config.primary_action_color || defaultConfig.primary_action_color}; font-size: 15px; margin-top: 4px;">
+                        ${msg.username || 'ANONYMOUS_USER'}
+                      </div>
+                    </div>
+                  </div>
+                  <button class="delete-message-btn secondary-btn px-4 py-1 border text-xs" data-id="${msg.id}" style="background-color: transparent; color: #ff0000; border-color: #ff0000;">
+                    ✕ [PURGE]
+                  </button>
+                </div>
+                
+                <div style="border-left: 2px solid ${config.primary_action_color || defaultConfig.primary_action_color}; padding-left: 16px; margin-bottom: 12px;">
+                  <div class="mb-2">
+                    <span style="opacity: 0.5; font-size: 11px;">TRANSMISSION:</span>
+                  </div>
+                  <div style="line-height: 1.6; font-size: 14px;">${msg.question}</div>
+                </div>
+                
+                <div class="flex justify-between text-xs opacity-40" style="border-top: 1px solid rgba(0, 255, 0, 0.2); padding-top: 8px; margin-top: 8px;">
+                  <div>◢ ${new Date(msg.timestamp).toLocaleDateString()}</div>
+                  <div>${new Date(msg.timestamp).toLocaleTimeString()} ◤</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderAnalytics() {
+      const config = window.elementSdk?.config || defaultConfig;
+      const totalMessages = liveMessages.length;
+      const totalTraining = trainingData.length;
+      const onlineCount = onlineUsers.length;
+      
+      return `
+        <div>
+          <div class="mb-6">
+            <h2 class="text-xl glow mb-1" style="color: ${config.primary_action_color || defaultConfig.primary_action_color}; letter-spacing: 1px;">[SYSTEM_ANALYTICS]</h2>
+            <div class="text-xs opacity-50">◢ REAL_TIME_MONITORING | LAST_UPDATE: ${new Date().toLocaleTimeString()}</div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="hacker-border p-6 text-center transition-all hover:scale-105" style="background-color: ${config.surface_color || defaultConfig.surface_color}; background-image: linear-gradient(135deg, rgba(0, 255, 0, 0.08) 0%, transparent 60%);">
+              <div class="cyber-corner top-left"></div>
+              <div class="cyber-corner bottom-right"></div>
+              <div class="text-xs opacity-40 mb-3 tracking-wider" style="font-family: monospace;">╔ METRIC_01 ╗</div>
+              <div class="text-5xl font-bold mb-3" style="color: ${config.primary_action_color || defaultConfig.primary_action_color}; font-family: 'Courier New', monospace;">${onlineCount}</div>
+              <div style="opacity: 0.7; letter-spacing: 2px; font-size: 13px; font-weight: 600;">[ONLINE_USERS]</div>
+              <div class="mt-4 flex justify-center gap-1">
+                <div style="width: 20px; height: 2px; background: ${config.primary_action_color || defaultConfig.primary_action_color}; opacity: 0.3;"></div>
+                <div style="width: 20px; height: 2px; background: ${config.primary_action_color || defaultConfig.primary_action_color}; opacity: 0.5;"></div>
+                <div style="width: 20px; height: 2px; background: ${config.primary_action_color || defaultConfig.primary_action_color}; opacity: 0.8;"></div>
+              </div>
+            </div>
+            
+            <div class="hacker-border p-6 text-center transition-all hover:scale-105" style="background-color: ${config.surface_color || defaultConfig.surface_color}; background-image: linear-gradient(135deg, rgba(0, 255, 0, 0.08) 0%, transparent 60%);">
+              <div class="cyber-corner top-left"></div>
+              <div class="cyber-corner bottom-right"></div>
+              <div class="text-xs opacity-40 mb-3 tracking-wider" style="font-family: monospace;">╔ METRIC_02 ╗</div>
+              <div class="text-5xl font-bold mb-3" style="color: ${config.primary_action_color || defaultConfig.primary_action_color}; font-family: 'Courier New', monospace;">${totalMessages}</div>
+              <div style="opacity: 0.7; letter-spacing: 2px; font-size: 13px; font-weight: 600;">[TOTAL_MESSAGES]</div>
+              <div class="mt-4 flex justify-center gap-1">
+                <div style="width: 20px; height: 2px; background: ${config.primary_action_color || defaultConfig.primary_action_color}; opacity: 0.3;"></div>
+                <div style="width: 20px; height: 2px; background: ${config.primary_action_color || defaultConfig.primary_action_color}; opacity: 0.5;"></div>
+                <div style="width: 20px; height: 2px; background: ${config.primary_action_color || defaultConfig.primary_action_color}; opacity: 0.8;"></div>
+              </div>
+            </div>
+            
+            <div class="hacker-border p-6 text-center transition-all hover:scale-105" style="background-color: ${config.surface_color || defaultConfig.surface_color}; background-image: linear-gradient(135deg, rgba(0, 255, 0, 0.08) 0%, transparent 60%);">
+              <div class="cyber-corner top-left"></div>
+              <div class="cyber-corner bottom-right"></div>
+              <div class="text-xs opacity-40 mb-3 tracking-wider" style="font-family: monospace;">╔ METRIC_03 ╗</div>
+              <div class="text-5xl font-bold mb-3" style="color: ${config.primary_action_color || defaultConfig.primary_action_color}; font-family: 'Courier New', monospace;">${totalTraining}</div>
+              <div style="opacity: 0.7; letter-spacing: 2px; font-size: 13px; font-weight: 600;">[TRAINING_ENTRIES]</div>
+              <div class="mt-4 flex justify-center gap-1">
+                <div style="width: 20px; height: 2px; background: ${config.primary_action_color || defaultConfig.primary_action_color}; opacity: 0.3;"></div>
+                <div style="width: 20px; height: 2px; background: ${config.primary_action_color || defaultConfig.primary_action_color}; opacity: 0.5;"></div>
+                <div style="width: 20px; height: 2px; background: ${config.primary_action_color || defaultConfig.primary_action_color}; opacity: 0.8;"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="hacker-border p-6" style="background-color: ${config.surface_color || defaultConfig.surface_color}; background-image: linear-gradient(135deg, rgba(0, 255, 0, 0.05), transparent 50%);">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-lg glow" style="color: ${config.primary_action_color || defaultConfig.primary_action_color}; letter-spacing: 1px;">[ONLINE_USERS_LIST]</h3>
+              <div class="text-xs opacity-50">ACTIVE_CONNECTIONS: ${onlineCount}</div>
+            </div>
+            
+            <div style="height: 1px; background: linear-gradient(to right, ${config.primary_action_color || defaultConfig.primary_action_color}, transparent); margin-bottom: 16px; opacity: 0.3;"></div>
+            
+            <div class="space-y-3">
+              ${onlineCount === 0 ? `
+                <div class="text-center py-8" style="opacity: 0.5;">
+                  <div style="font-size: 32px; opacity: 0.3; margin-bottom: 8px;">⊘</div>
+                  <div>[NO_USERS_ONLINE]</div>
+                  <div style="font-size: 10px; opacity: 0.3; margin-top: 8px;">WAITING_FOR_CONNECTIONS</div>
+                </div>
+              ` : onlineUsers.map((user, index) => `
+                <div class="flex justify-between items-center p-4 border" style="border-color: ${config.primary_action_color || defaultConfig.primary_action_color}; background: linear-gradient(to right, rgba(0, 255, 0, 0.05), transparent 60%);">
+                  <div class="flex items-center gap-4">
+                    <div style="width: 32px; height: 32px; border: 2px solid ${config.primary_action_color || defaultConfig.primary_action_color}; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(0, 255, 0, 0.1);">
+                      <span style="font-size: 10px; opacity: 0.6;">${String(index + 1).padStart(2, '0')}</span>
+                    </div>
+                    <div>
+                      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                        <span class="glow" style="color: ${config.primary_action_color || defaultConfig.primary_action_color}; font-size: 8px;">●</span>
+                        <span style="font-size: 15px;">${user.username}</span>
+                      </div>
+                      <div class="text-xs opacity-40">SESSION_ACTIVE</div>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-xs opacity-60 mb-1">${user.status}</div>
+                    <div class="text-xs opacity-30">◢◤◢</div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function attachEventListeners() {
+      const addTrainingBtn = document.getElementById('add-training-btn');
+      if (addTrainingBtn) {
+        addTrainingBtn.addEventListener('click', showAddTrainingForm);
+      }
+      
+      document.querySelectorAll('.edit-training-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const id = e.target.closest('.edit-training-btn').dataset.id;
+          const item = trainingData.find(d => d.id === id);
+          if (item) showEditTrainingForm(item);
+        });
+      });
+      
+      document.querySelectorAll('.delete-training-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleDelete(e.target.closest('.delete-training-btn').dataset.id);
+        });
+      });
+      
+      document.querySelectorAll('.delete-message-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleDelete(e.target.closest('.delete-message-btn').dataset.id);
+        });
+      });
+    }
+
+    function showAddTrainingForm() {
+      const config = window.elementSdk?.config || defaultConfig;
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 flex items-center justify-center z-50';
+      modal.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+      
+      modal.innerHTML = `
+        <div class="hacker-border p-6 max-w-md w-full mx-4" style="background-color: ${config.surface_color || defaultConfig.surface_color};">
+          <h2 class="text-lg mb-4 glow" style="color: ${config.primary_action_color || defaultConfig.primary_action_color};">[ADD_TRAINING_ENTRY]</h2>
+          <form id="training-form" class="space-y-4">
+            <div>
+              <label class="block mb-2">QUESTION:</label>
+              <input 
+                type="text" 
+                id="question" 
+                class="w-full px-4 py-2 bg-black border focus:outline-none" 
+                style="border-color: ${config.primary_action_color || defaultConfig.primary_action_color}; color: ${config.text_color || defaultConfig.text_color};"
+                required
+              />
+            </div>
+            <div>
+              <label class="block mb-2">ANSWER:</label>
+              <textarea 
+                id="answer" 
+                rows="4"
+                class="w-full px-4 py-2 bg-black border focus:outline-none" 
+                style="border-color: ${config.primary_action_color || defaultConfig.primary_action_color}; color: ${config.text_color || defaultConfig.text_color};"
+                required
+              ></textarea>
+            </div>
+            <div id="loading" class="hidden text-center glow" style="color: ${config.primary_action_color || defaultConfig.primary_action_color};">[PROCESSING...]</div>
+            <div class="flex gap-2">
+              <button 
+                type="submit" 
+                class="primary-btn flex-1 py-2 border"
+                style="background-color: ${config.primary_action_color || defaultConfig.primary_action_color}; color: ${config.background_color || defaultConfig.background_color}; border-color: ${config.primary_action_color || defaultConfig.primary_action_color};"
+              >
+                [SAVE]
+              </button>
+              <button 
+                type="button" 
+                id="cancel-btn" 
+                class="secondary-btn flex-1 py-2 border"
+                style="background-color: ${config.secondary_action_color || defaultConfig.secondary_action_color}; color: ${config.background_color || defaultConfig.background_color}; border-color: ${config.secondary_action_color || defaultConfig.secondary_action_color};"
+              >
+                [CANCEL]
+              </button>
+            </div>
+          </form>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      
+      document.getElementById('training-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        if (allData.length >= 999) {
+          showNotification('[ERROR] Maximum limit reached');
+          return;
+        }
+        
+        const loading = document.getElementById('loading');
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        
+        loading.classList.remove('hidden');
+        submitBtn.disabled = true;
+        
+        const newEntry = {
+          id: Date.now().toString(),
+          type: 'training',
+          question: document.getElementById('question').value,
+          answer: document.getElementById('answer').value,
+          timestamp: new Date().toISOString()
+        };
+        
+        const result = await window.dataSdk.create(newEntry);
+        
+        loading.classList.add('hidden');
+        submitBtn.disabled = false;
+        
+        if (result.isOk) {
+          modal.remove();
+          showNotification('[SUCCESS] Entry added');
+        } else {
+          showNotification('[ERROR] Failed to add entry');
+        }
+      });
+      
+      document.getElementById('cancel-btn').addEventListener('click', () => modal.remove());
+    }
+
+    function showEditTrainingForm(item) {
+      const config = window.elementSdk?.config || defaultConfig;
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 flex items-center justify-center z-50';
+      modal.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+      
+      modal.innerHTML = `
+        <div class="hacker-border p-6 max-w-md w-full mx-4" style="background-color: ${config.surface_color || defaultConfig.surface_color};">
+          <h2 class="text-lg mb-4 glow" style="color: ${config.primary_action_color || defaultConfig.primary_action_color};">[EDIT_TRAINING_ENTRY]</h2>
+          <form id="edit-form" class="space-y-4">
+            <div>
+              <label class="block mb-2">QUESTION:</label>
+              <input 
+                type="text" 
+                id="edit-question" 
+                value="${item.question}"
+                class="w-full px-4 py-2 bg-black border focus:outline-none" 
+                style="border-color: ${config.primary_action_color || defaultConfig.primary_action_color}; color: ${config.text_color || defaultConfig.text_color};"
+                required
+              />
+            </div>
+            <div>
+              <label class="block mb-2">ANSWER:</label>
+              <textarea 
+                id="edit-answer" 
+                rows="4"
+                class="w-full px-4 py-2 bg-black border focus:outline-none" 
+                style="border-color: ${config.primary_action_color || defaultConfig.primary_action_color}; color: ${config.text_color || defaultConfig.text_color};"
+                required
+              >${item.answer}</textarea>
+            </div>
+            <div id="edit-loading" class="hidden text-center glow" style="color: ${config.primary_action_color || defaultConfig.primary_action_color};">[UPDATING...]</div>
+            <div class="flex gap-2">
+              <button 
+                type="submit" 
+                class="primary-btn flex-1 py-2 border"
+                style="background-color: ${config.primary_action_color || defaultConfig.primary_action_color}; color: ${config.background_color || defaultConfig.background_color}; border-color: ${config.primary_action_color || defaultConfig.primary_action_color};"
+              >
+                [UPDATE]
+              </button>
+              <button 
+                type="button" 
+                id="cancel-edit-btn" 
+                class="secondary-btn flex-1 py-2 border"
+                style="background-color: ${config.secondary_action_color || defaultConfig.secondary_action_color}; color: ${config.background_color || defaultConfig.background_color}; border-color: ${config.secondary_action_color || defaultConfig.secondary_action_color};"
+              >
+                [CANCEL]
+              </button>
+            </div>
+          </form>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      
+      document.getElementById('edit-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const loading = document.getElementById('edit-loading');
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        
+        loading.classList.remove('hidden');
+        submitBtn.disabled = true;
+        
+        const updatedItem = {
+          ...item,
+          question: document.getElementById('edit-question').value,
+          answer: document.getElementById('edit-answer').value,
+          timestamp: new Date().toISOString()
+        };
+        
+        const result = await window.dataSdk.update(updatedItem);
+        
+        loading.classList.add('hidden');
+        submitBtn.disabled = false;
+        
+        if (result.isOk) {
+          modal.remove();
+          showNotification('[SUCCESS] Entry updated');
+        } else {
+          showNotification('[ERROR] Failed to update');
+        }
+      });
+      
+      document.getElementById('cancel-edit-btn').addEventListener('click', () => modal.remove());
+    }
+
+    async function handleDelete(id) {
+      const item = allData.find(d => d.id === id);
+      if (!item) return;
+      
+      const config = window.elementSdk?.config || defaultConfig;
+      const confirmDiv = document.createElement('div');
+      confirmDiv.className = 'fixed bottom-4 right-4 hacker-border p-4 z-50';
+      confirmDiv.style.backgroundColor = config.surface_color || defaultConfig.surface_color;
+      
+      confirmDiv.innerHTML = `
+        <div class="mb-3">[CONFIRM_DELETE?]</div>
+        <div class="flex gap-2">
+          <button id="confirm-del" class="primary-btn px-4 py-2 border" style="background-color: ${config.primary_action_color || defaultConfig.primary_action_color}; color: ${config.background_color || defaultConfig.background_color}; border-color: ${config.primary_action_color || defaultConfig.primary_action_color};">
+            [YES]
+          </button>
+          <button id="cancel-del" class="secondary-btn px-4 py-2 border" style="background-color: ${config.secondary_action_color || defaultConfig.secondary_action_color}; color: ${config.background_color || defaultConfig.background_color}; border-color: ${config.secondary_action_color || defaultConfig.secondary_action_color};">
+            [NO]
+          </button>
+        </div>
+        <div id="del-loading" class="hidden text-center mt-2 glow" style="color: ${config.primary_action_color || defaultConfig.primary_action_color};">[DELETING...]</div>
+      `;
+      
+      document.body.appendChild(confirmDiv);
+      
+      document.getElementById('confirm-del').addEventListener('click', async () => {
+        const loading = document.getElementById('del-loading');
+        loading.classList.remove('hidden');
+        
+        const result = await window.dataSdk.delete(item);
+        
+        if (result.isOk) {
+          showNotification('[SUCCESS] Deleted');
+        } else {
+          showNotification('[ERROR] Failed to delete');
+        }
+        
+        confirmDiv.remove();
+      });
+      
+      document.getElementById('cancel-del').addEventListener('click', () => confirmDiv.remove());
+    }
+
+    function showNotification(message) {
+      const config = window.elementSdk?.config || defaultConfig;
+      const notif = document.createElement('div');
+      notif.className = 'fixed top-4 right-4 hacker-border p-4 z-50 glow';
+      notif.style.backgroundColor = config.surface_color || defaultConfig.surface_color;
+      notif.style.color = config.primary_action_color || defaultConfig.primary_action_color;
+      notif.textContent = message;
+      
+      document.body.appendChild(notif);
+      setTimeout(() => notif.remove(), 3000);
+    }
+
+    function renderCurrentTab() {
+      const content = document.getElementById('content-area');
+      if (content) {
+        content.innerHTML = renderTabContent();
+        attachEventListeners();
+      }
+    }
+
+    function handleLogout() {
+      isAuthenticated = false;
+      renderLoginScreen();
+    }
+
+    initApp();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b5facb480326e29',t:'MTc2NzA3ODE3OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

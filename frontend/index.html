@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Nyra - Your AI Friend</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap">
+
+  <style>
+    .menu-box{
+  position:absolute;
+  bottom:80px;
+  right:50px;
+  background:#231a32;
+  padding:10px;
+  border-radius:10px;
+  display:none;
+  flex-direction:column;
+  gap:8px;
+  box-shadow:0 0 15px rgba(0,0,0,.6);
+}
+.menu-box button{
+  background:#a155ff;
+  border:none;
+  padding:8px;
+  border-radius:6px;
+  color:white;
+  cursor:pointer;
+  font-size:13px;
+}
+.menu-box button:hover{ background:#c77dff; }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Poppins
+    }
+
+    body {
+      background: #0e0b14;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .chat-container {
+      width: 430px;
+      height: 700px;
+      background: #1b1524;
+      border-radius: 26px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 0 30px rgba(0, 0, 0, .6);
+    }
+
+    @media(max-width:600px) {
+      .chat-container {
+        width: 100%;
+        height: 100vh;
+        border-radius: 0;
+      }
+    }
+
+    .header {
+      background: #1b1524;
+      padding: 18px 0;
+      text-align: center;
+      border-bottom: 1px solid #2e243b;
+    }
+
+    .name {
+      font-size: 19px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .sub {
+      font-size: 11px;
+      color: #c9a9ff;
+      margin-top: 2px;
+    }
+
+    .chat-box::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .chat-box::-webkit-scrollbar-thumb {
+      background: #5e3f85;
+      border-radius: 20px;
+    }
+
+    .chat-box {
+      flex: 1;
+      padding: 14px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      scroll-behavior: smooth;
+    }
+
+    .msg {
+      max-width: 78%;
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      font-size: 14px;
+      line-height: 1.52;
+      animation: pop .25s ease;
+      position: relative;
+    }
+
+    @keyframes pop {
+      from {
+        opacity: 0;
+        transform: translateY(10px)
+      }
+
+      to {
+        opacity: 1
+      }
+    }
+
+    .bot {
+      background: #2a2135;
+      color: #e6e6e6;
+      border-radius: 14px;
+      border-bottom-left-radius: 4px;
+      align-self: flex-start;
+    }
+
+    .bot:after {
+      content: "";
+      position: absolute;
+      left: -6px;
+      bottom: 6px;
+      border-top: 7px solid transparent;
+      border-right: 7px solid #2a2135;
+      border-bottom: 7px solid transparent;
+    }
+
+    .user {
+      background: linear-gradient(135deg, #a155ff, #c77dff);
+      color: #fff;
+      border-radius: 14px;
+      border-bottom-right-radius: 4px;
+      align-self: flex-end;
+    }
+
+    .user:after {
+      content: "";
+      position: absolute;
+      right: -6px;
+      bottom: 6px;
+      border-top: 7px solid transparent;
+      border-left: 7px solid #a155ff;
+      border-bottom: 7px solid transparent;
+    }
+
+    .time {
+      display: block;
+      margin-top: 2px;
+      text-align: right;
+      font-size: 10px;
+      color: #e1d4ff;
+      padding-right: 4px;
+    }
+
+    .typing-line {
+      font-size: 12px;
+      color: #c6a6ff;
+      margin-top: -4px;
+      margin-bottom: 8px;
+      display: flex;
+      gap: 4px;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #c78aff;
+      animation: blink 1.2s infinite alternate;
+    }
+
+    .dot:nth-child(2) {
+      animation-delay: .25s
+    }
+
+    .dot:nth-child(3) {
+      animation-delay: .50s
+    }
+
+    @keyframes blink {
+      from {
+        opacity: .3
+      }
+
+      to {
+        opacity: 1
+      }
+    }
+
+    .input-area {
+      display: flex;
+      gap: 10px;
+      padding: 14px;
+      background: #160f23;
+      border-top: 1px solid #2e243b;
+    }
+
+    input {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 20px;
+      background: #231a32;
+      color: white;
+      font-size: 14px;
+    }
+
+    input:focus {
+      outline: 2px solid #c77dff;
+    }
+
+    button {
+      width: 50px;
+      height: 50px;
+      border: none;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #a155ff, #c77dff);
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+      transition: .2s;
+    }
+
+    button:hover {
+      transform: scale(1.07);
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="chat-container">
+    <div class="header">
+      <div class="name">Nyra</div>
+      <div class="sub" id="substatus">Your AI Friend 💜</div>
+    </div>
+    
+
+    <div class="chat-box" id="chatBox"></div>
+
+    
+    
+    <div class="input-area" style="position: relative;">
+      <input id="input" placeholder="Message Nyra...">
+    
+      <!-- Menu button -->
+      <button id="menuBtn">☰</button>
+    
+      <!-- Send button -->
+      <button id="sendBtn">➤</button>
+    
+      <!-- Popup menu -->
+      <div id="menuBox" class="menu-box">
+        <button onclick="pickFile('image/*')">📷 </button>
+        <button onclick="pickFile('.pdf')">📄 </button>
+        <button onclick="pickFile('.doc,.docx')">📝 </button>
+      </div>
+    </div>
+    
+  </div>
+
+  <!-- ================= Original Script untouched ================= -->
+  <script>
+    /* ================= BASIC SETUP ================= */
+    const chatBox = document.getElementById("chatBox");
+    const input = document.getElementById("input");
+    const sendBtn = document.getElementById("sendBtn");
+    sendBtn.onclick = () => send();
+    input.addEventListener("keydown", e => { if (e.key === "Enter") send() });
+
+    let userName = localStorage.getItem("vibelyName") || null;
+
+    /* Time */
+    function t() {
+      let d = new Date(), h = d.getHours(), m = d.getMinutes();
+      return `${h > 12 ? h - 12 : h}:${m < 10 ? '0' + m : m} ${h >= 12 ? 'pm' : 'am'}`;
+    }
+
+    /* ================= MEMORY SYSTEM ================= */
+    let memory = JSON.parse(localStorage.getItem("vibelyMemory") || "{}");
+
+    function remember(key, val) {
+      memory[key] = val;
+      localStorage.setItem("vibelyMemory", JSON.stringify(memory));
+    }
+    function recall(key) {
+      return memory[key] || null;
+    }
+
+    /* ================= Detect Dhruv ================= */
+    const dhruvReplies = [
+      `Haan Dhruv mere creator hain 😊  
+      Computer & AI projects me interested hain.  
+      Vibely unka dream project hai 💜`,
+
+      `Dhruv ek tech lover hai 😄  
+      Coding, AI, websites banate rehte.  
+      Vibely unhone users ke emotions samjhne ke liye banaya ✨`,
+
+      `Dhruv ek developer by passion hai 😄
+Kabhi code smooth chalta, kabhi error nonstop – but give up kabhi nahi.
+Reverse engineering ka shauk, AI ke saath khelna pasand 😆
+Future me bade projects aur tools banane ka plan 💪
+
+Aur guess karo?
+Main Vibely bhi Dhruv ne hi banaya hai 💜
+Main uska AI friend hoon… thoda smart, thoda cute ✨
+😎`
+    ];
+    function askDhruv(msg) { return /(dhruv|creator|owner|made you)/i.test(msg); }
+
+    /* ================= Name Detect FIX ================= */
+    function detectName(msg) {
+      let m = msg.match(/(?:my name is|mera naam|i am|i'm)\s+([a-zA-Z]+)/i);
+      if (m) {
+        userName = m[1];
+        remember("username", userName);
+        return `${userName}? nice naam 💜 yaad rakh liya 😊`;
+      }
+      return null;
+    }
+
+    /* ================= Learning Favourite Things ================= */
+    function learn(msg) {
+      msg = msg.toLowerCase();
+
+      if (msg.includes("favorite") || msg.includes("favourite")) {
+        if (msg.includes("color"))
+          return (remember("fav_color", msg.split("color")[1].trim()), `Nice! tumhe **${recall("fav_color")}** color pasand hai 💜`);
+        if (msg.includes("game"))
+          return (remember("fav_game", msg.split("game")[1].trim()), `Wow! tumhara favourite game **${recall("fav_game")}** hai 🎮`);
+        if (msg.includes("food"))
+          return (remember("fav_food", msg.split("food")[1].trim()), `Yummy! tumhe **${recall("fav_food")}** pasand hai 😋`);
+      }
+      return null;
+    }
+
+    /* ================= Recall Questions fix ================= */
+    function wantsRecall(msg) {
+      return /(mera|my|kya|what).*(favorite|fav|pasand)/i.test(msg);
+    }
+    async function recallAns(msg) {
+      if (/color/.test(msg) && recall("fav_color"))
+        return `Haan yaad hai 💜 tumhe **${recall("fav_color")}** color pasand hai.`;
+      if (/game/.test(msg) && recall("fav_game"))
+        return `Tumhara favorite game **${recall("fav_game")}** hai 🎮`;
+      if (/food/.test(msg) && recall("fav_food"))
+        return `Tumhe **${recall("fav_food")}** pasand hai 😋`;
+
+      if (recall("fav_color") || recall("fav_game") || recall("fav_food"))
+        return `Yaad hai kuch baatein tumhari 😊  
+      Color/Game/Food puchoge to bata dungi 💜`;
+
+      return null;
+    }
+
+    /* ================= Greetings ================= */
+    function autoGreet() {
+      let h = new Date().getHours();
+      if (h < 12) return "Good morning 🌞";
+      if (h < 18) return "Good afternoon ✨";
+      if (h < 23) return "Good evening 🌙";
+      return "It's late night 🌌 take care";
+    }
+
+    setTimeout(() => bot(userName ? `Welcome back ${userName} 💜` : `Hey! Nice to see you 😊`), 700);
+
+    /* ================= Typing Effect + Bot msg ================= */
+    function showTyping() {
+      removeTyping();
+      chatBox.innerHTML += `<div class='typing-line' id='typingBox'>
+      <span class='dot'></span><span class='dot'></span><span class='dot'></span>
+      </div>`;
+      chatBox.scrollTop = 999999;
+    }
+    function removeTyping() { let x = document.getElementById("typingBox"); if (x) x.remove(); }
+    function bot(txt) {
+      removeTyping();
+      chatBox.innerHTML += `<div class='msg bot'>${txt}<span class="time">${t()}</span></div>`;
+      chatBox.scrollTop = 999999;
+    }
+
+    /* ================= SEND ================= */
+    async function send() {
+      let msg = input.value.trim(); if (!msg) return;
+      chatBox.innerHTML += `<div class='msg user'>${msg}<span class='time tick'>✔ Delivered</span></div>`;
+      input.value = ""; chatBox.scrollTop = 999999; showTyping();
+
+      /* 1) Dhruv */
+      if (askDhruv(msg)) { await wait(900); bot(random(dhruvReplies)); return; }
+
+      /* 2) Name */
+      let nameReply = detectName(msg);
+      if (nameReply) { await wait(800); bot(nameReply); return; }
+
+      /* 3) LEARN Save */
+      let learnReply = learn(msg);
+      if (learnReply) { await wait(900); bot(learnReply); return; }
+
+      /* 4) Recall */
+      if (wantsRecall(msg)) {
+        let r = await recallAns(msg);
+        if (r) { await wait(900); bot(r); return; }
+      }
+
+      /* 5) Greeting */
+      if (/good morning|night|gm|gn/i.test(msg)) {
+        await wait(800); bot(autoGreet()); return;
+      }
+
+      /* 6) Send to backend */
+      let res = await fetch("http://localhost:3000/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: msg }) });
+      let data = await res.json();
+      let reply = (userName ? userName + ", " : "") + data.reply;
+      await wait(reply.length < 120 ? 1200 : 2000);
+      bot(reply);
+    }
+    async function analyzeFile() {
+        let file = document.getElementById("fileUpload").files[0];
+        if (!file) return bot("⚠ Please select a file first");
+
+        let form = new FormData();
+        form.append("file", file);
+
+        showTyping();
+
+        let res = await fetch("http://localhost:3000/analyze", {
+          method: "POST",
+          body: form
+        });
+
+        let data = await res.json();
+        await wait(1200);
+        bot("📄 File processed:\n\n" + data.reply);
+      }
+
+
+    /* ================= Utils ================= */
+    function random(a) { return a[Math.floor(Math.random() * a.length)] }
+    function wait(ms) { return new Promise(r => setTimeout(r, ms)) }
+  </script>
+  <script>
+    // 🧠 TRAINING MODE TRIGGER (Only if admin panel is open)
+    let trainingMode = false;
+
+    // Detect wrong replies (If user says "Galat", "wrong", "No", "Nahi")
+    function detectWrong(msg, botReply) {
+      return /(wrong|galat|nahi sahi|no this is wrong)/i.test(msg)
+        ? botReply
+        : null;
+    }
+
+    /* Save Training Data to Server */
+    async function trainAI(inputText, correctText) {
+      await fetch("http://localhost:3000/train", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ incoming: inputText, correct: correctText })
+      });
+      alert("✔ Reply learned & saved!");
+    }
+
+    // UI Prompt For Admin Training
+    function openTrainer(original) {
+      let correct = prompt("Wrong response detected! Enter correct reply:");
+      if (correct && correct.trim() !== "") {
+        trainAI(original, correct.trim());
+      }
+    }
+
+    /* Modify your bot reply function insert this ABOVE bot(reply); */
+    let lastUserMsg = "";
+
+    // Replace in send()
+    async function send() {
+      let msg = input.value.trim(); if (!msg) return;
+      lastUserMsg = msg;  // store last msg before sending
+
+      chatBox.innerHTML += `<div class='msg user'>${msg}<span class='time tick'>✔ Delivered</span></div>`;
+      input.value = ""; chatBox.scrollTop = 999999; showTyping();
+
+      // ===== Dhruv, Name Detect, Memory block remains same ===== //
+
+      // ===== Backend Fetch (Must Replace this block only) ===== //
+      let res = await fetch("http://localhost:3000/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg })
+      });
+
+      let data = await res.json();
+      let reply = (userName ? userName + ", " : "") + data.reply;
+
+      await wait(1200);
+      bot(reply);
+
+      // TRAINING CHECK
+      setTimeout(() => {
+        let wrong = detectWrong(msg, reply);
+        if (wrong) { console.log("Training triggered!"); openTrainer(lastUserMsg); }
+      }, 600);
+    }
+    // MENU SHOW/HIDE
+      let menuBtn = document.getElementById("menuBtn");
+      let menuBox = document.getElementById("menuBox");
+
+      menuBtn.onclick = () => {
+        menuBox.style.display = menuBox.style.display == "flex" ? "none" : "flex";
+      }
+
+      // File Picker Trigger
+      function pickFile(type) {
+        let input = document.createElement("input");
+        input.type = "file";
+        input.accept = type;
+        input.onchange = e => {
+          analyzeSelected(e.target.files[0]);
+        }
+        input.click();
+        menuBox.style.display = "none";
+      }
+
+      // File Analyze Function
+      async function analyzeSelected(file) {
+        let form = new FormData();
+        form.append("file", file);
+
+        showTyping();
+
+        let res = await fetch("http://localhost:3000/analyze", { method: "POST", body: form });
+        let data = await res.json();
+
+        bot("📄 File processed:\n\n" + data.reply);
+      }
+
+  </script>
+    
+    
+    </body>
+
+</html>
